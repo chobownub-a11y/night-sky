@@ -1,0 +1,25 @@
+{
+  "rules": {
+    "meta": {
+      "count": {
+        ".read": true,
+        ".write": "auth != null",
+        ".validate": "newData.isNumber() && newData.val() >= 0"
+      }
+    },
+    "stars": {
+      ".read": true,
+      "$id": {
+        ".write": "auth != null && !data.exists()",
+        ".validate": "newData.hasChildren(['nx','ny','h','ts','uid']) && newData.child('uid').val() === auth.uid",
+        "nx":  { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1" },
+        "ny":  { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1" },
+        "h":   { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 3" },
+        "msg": { ".validate": "newData.isString() && newData.val().length <= 60" },
+        "ts":  { ".validate": "newData.isNumber()" },
+        "uid": { ".validate": "newData.isString()" },
+        "$other": { ".validate": false }
+      }
+    }
+  }
+}
