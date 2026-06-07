@@ -23,14 +23,14 @@
 
   .ui{position:fixed;z-index:10;pointer-events:none;color:var(--ink)}
   .title{top:40px;left:54px}
-  .title .k{font-family:'Nanum Brush Script',cursive;font-size:clamp(38px,6vw,54px);line-height:.9;color:#23242a;text-shadow:0 1px 0 rgba(255,255,255,.25)}
-  .title .s{font-family:'Nanum Myeongjo',serif;font-size:13px;letter-spacing:7px;color:rgba(40,38,42,.62);margin-top:8px;margin-left:4px}
+  .title .k{font-family:'Nanum Brush Script',cursive;font-size:clamp(38px,6vw,54px);line-height:.9;color:#f1e9d6;text-shadow:0 2px 16px rgba(0,0,0,.6),0 0 2px rgba(0,0,0,.35)}
+  .title .s{font-family:'Nanum Myeongjo',serif;font-size:13px;letter-spacing:7px;color:rgba(240,232,214,.66);margin-top:8px;margin-left:4px;text-shadow:0 1px 8px rgba(0,0,0,.55)}
   .count{top:46px;right:56px;text-align:right;font-family:'Nanum Myeongjo',serif}
-  .count .n{font-size:15px;letter-spacing:2px;color:#33312f}
-  .count .n b{font-size:26px;font-weight:800;color:#23242a}
-  .count .s{font-size:11px;letter-spacing:3px;color:rgba(40,38,42,.5);margin-top:4px}
-  .hint{left:50%;bottom:40px;transform:translateX(-50%);font-family:'Gowun Batang',serif;font-size:clamp(12px,2.6vw,14px);letter-spacing:3px;color:rgba(40,38,42,.62);
-    text-align:center;width:90%;animation:bre 4s ease-in-out infinite}
+  .count .n{font-size:15px;letter-spacing:2px;color:rgba(240,232,214,.72);text-shadow:0 1px 8px rgba(0,0,0,.55)}
+  .count .n b{font-size:26px;font-weight:800;color:#f3ecda;text-shadow:0 2px 14px rgba(0,0,0,.55)}
+  .count .s{font-size:11px;letter-spacing:3px;color:rgba(240,232,214,.5);margin-top:4px;text-shadow:0 1px 8px rgba(0,0,0,.5)}
+  .hint{left:50%;bottom:40px;transform:translateX(-50%);font-family:'Gowun Batang',serif;font-size:clamp(12px,2.6vw,14px);letter-spacing:3px;color:rgba(240,232,214,.74);
+    text-align:center;width:90%;text-shadow:0 1px 12px rgba(0,0,0,.6);animation:bre 4s ease-in-out infinite}
   @keyframes bre{0%,100%{opacity:.45}50%{opacity:.95}}
   #demo{position:fixed;left:54px;bottom:40px;z-index:10;pointer-events:none;display:none;font-family:'Gowun Batang';font-size:11px;letter-spacing:1px;color:rgba(120,40,34,.6)}
 
@@ -60,6 +60,13 @@
   .row button{flex:1;border:0;padding:11px;font-family:'Nanum Myeongjo',serif;font-size:14px;letter-spacing:2px;cursor:pointer;transition:filter .15s}
   .row .go{background:#23242a;color:#f0e7d0} .row .go:hover{filter:brightness(1.25)}
   .row .no{background:rgba(90,70,40,.12);color:rgba(60,45,25,.7)}
+
+  #bgm{position:fixed;left:-9999px;top:-9999px;width:300px;height:170px;pointer-events:none;border:0}
+  #mute{position:fixed;left:30px;bottom:30px;z-index:12;width:36px;height:36px;border:1px solid rgba(120,95,55,.4);border-radius:50%;
+    background:rgba(236,226,200,.55);color:#3a2c14;display:none;align-items:center;justify-content:center;cursor:pointer;font-size:15px;
+    backdrop-filter:blur(3px);transition:background .15s,transform .15s}
+  #mute:hover{background:rgba(236,226,200,.9);transform:scale(1.08)}
+  #mute.show{display:flex}
 </style>
 </head>
 <body>
@@ -70,6 +77,8 @@
   <div class="ui count" id="count"><div class="n">머문 빛 <b>0</b></div><div class="s">개의 소원이 이 밤에 남았습니다</div></div>
   <div class="ui hint">빈 하늘을 눌러 빛을 남기고 · 빛에 머물러 소원을 읽으세요</div>
   <div id="demo">· 데모 모드 — 공유 백엔드 미연결 ·</div>
+  <div id="mute" title="소리 켜기 / 끄기" aria-label="배경음 토글">🔊</div>
+  <div id="bgm" aria-hidden="true"></div>
 
   <div id="tip"><div class="m"></div><div class="t"></div></div>
   <div id="compose">
@@ -85,11 +94,7 @@
 
   <script src="config.js"></script>
   <script type="module">
-  /* =========================================================================
-     모두의 밤하늘 · 수묵 방명록  (Canvas-2D 수묵화 + Firebase 실시간DB)
-     - config.js 의 firebase 값을 채우면 '공유 모드'로 동작
-     - 비워두면 localStorage '데모 모드'로 동작
-     ========================================================================= */
+
   const cv=document.getElementById('sky'), ctx=cv.getContext('2d');
   let W=0,H=0,DPR=1;
   const stat=document.createElement('canvas'), sctx=stat.getContext('2d');
@@ -253,6 +258,32 @@
   })();
 
   window.__ink={ open:(x,y)=>{ pending={nx:x/W,ny:y/H}; openCompose(x,y); document.getElementById('msg').value='별 보러 왔다 갑니다'; }, move:(x,y)=>onMove(x,y) };
+  </script>
+
+  <script>
+  /* ---- 배경음 ---- */
+  (function(){
+    var VID='pYz_yhiycQg', TARGET=50, FADE=12000;
+    var player=null, ready=false, started=false, pending=false, muted=false;
+    var mute=document.getElementById('mute');
+    var tag=document.createElement('script'); tag.src='https://www.youtube.com/iframe_api'; document.head.appendChild(tag);
+    window.onYouTubeIframeAPIReady=function(){
+      player=new YT.Player('bgm',{ videoId:VID,
+        playerVars:{ autoplay:0, controls:0, disablekb:1, fs:0, loop:1, playlist:VID, modestbranding:1, playsinline:1, rel:0 },
+        events:{
+          onReady:function(){ ready=true; try{ player.setVolume(0); }catch(e){} if(pending) doStart(); },
+          onStateChange:function(e){ if(e.data===YT.PlayerState.ENDED){ try{ player.seekTo(0,true); player.playVideo(); }catch(_){} } }
+        } });
+    };
+    function ramp(){ var t0=performance.now(); (function step(now){ if(muted||!started) return;
+      var p=Math.min(1,(now-t0)/FADE); try{ player.setVolume(Math.round(p*TARGET)); }catch(e){} if(p<1) requestAnimationFrame(step); })(performance.now()); }
+    function doStart(){ if(started||!player) return; started=true; try{ player.unMute(); player.setVolume(0); player.playVideo(); }catch(e){} ramp(); mute.classList.add('show'); }
+    function arm(){ if(started) return; if(ready) doStart(); else pending=true; }
+    ['pointerdown','keydown','touchstart','wheel'].forEach(function(ev){ window.addEventListener(ev,arm,{passive:true}); });
+    mute.addEventListener('pointerdown',function(e){ e.stopPropagation(); });
+    mute.addEventListener('click',function(e){ e.stopPropagation(); if(!started){ arm(); return; }
+      muted=!muted; try{ if(muted){ player.mute(); mute.textContent='🔇'; } else { player.unMute(); player.setVolume(TARGET); mute.textContent='🔊'; } }catch(_){} });
+  })();
   </script>
 </body>
 </html>
